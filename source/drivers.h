@@ -1,4 +1,4 @@
-// ***********************************************************
+﻿// ***********************************************************
 //	drivers.h
 // 	Инициализация всей необходимой периферии v2.0.0
 //
@@ -74,6 +74,9 @@
 	
 	// Software UART receiver
 	#include "drivers/softuartrx.h"
+	
+	// Software UART receiver
+	#include "drivers/uuid.h"
 	
     // BSP
     #include "bsp.h"
