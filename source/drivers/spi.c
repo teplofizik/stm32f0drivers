@@ -62,7 +62,7 @@ static void InitPhy(const TSPIPhy * Phy, const TSPIPins * Pins, bool CPHA, bool 
     SPI->CR1 = 0;
 	
     // Настроим скорость передачи: 0b100 (fp / 8) 1000 КГц
-    SPI->CR1 |= SPI_CR1_BR_2;
+    SPI->CR1 |= SPI_CR1_BR_1;
     
     // Программное управление SS (внутренним)
     SPI->CR1 |= SPI_CR1_SSI | SPI_CR1_SSM;
@@ -78,6 +78,16 @@ static void InitPhy(const TSPIPhy * Phy, const TSPIPins * Pins, bool CPHA, bool 
     
     // Установим флаг разрешения работы (SPE)
     SPI->CR1 |= SPI_CR1_SPE;
+}
+
+bool spi_GetMisoState(TSPI Phy)
+{
+	if(Phy < PHYCount)
+		// Свободно ли?
+		if(States[Phy].InUse)
+			return gp_Get(&PHY[Phy].Pins[States[Phy].Pins].MISO);
+		
+	return false;
 }
 
 // Инициализация модуля SPI

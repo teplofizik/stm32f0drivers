@@ -28,6 +28,8 @@
 	// Отправка данных
 	uint8_t spi_Send(TSPI Phy, uint8_t Data);
 	
+	bool spi_GetMisoState(TSPI Phy);
+	
     extern const TDriver spi;
 	
 #endif

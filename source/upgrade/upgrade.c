@@ -13,7 +13,6 @@
 static bool         UpgradeEnabled = false;
 static TLockHandler LockHandler;
 // прошивка
-static uint8_t *    NeedDMXProgram = (uint8_t *)0;
 static bool         NeedErase = false;
 
 // Проверка
@@ -60,13 +59,6 @@ void upg_Write(uint32_t Offset, uint8_t * Data, uint32_t Length)
             ProgramLength = 0;
         }
     }
-}
-
-// Записать кусок прошивки с потока DMX
-void upg_DMXWrite(uint32_t Offset)
-{
-    if(UpgradeEnabled)
-        NeedDMXProgram = &TempFirmware[Offset];
 }
 
 // Проверить контрольную сумму
@@ -118,19 +110,6 @@ void upg_Uninit(void)
     
     NeedUpgrade = false;
     NeedErase = false;
-}
-
-void upg_OnDMX(const uint8_t * DMX)
-{
-    if(UpgradeEnabled)
-    {
-        if(!NeedDMXProgram) return;
-        
-        __disable_irq();
-        flash_Write(DMX, NeedDMXProgram, 512);
-        __enable_irq();
-        NeedDMXProgram = (uint8_t *)0;
-    }
 }
 
 void upg_SetLockCallback(TLockHandler Handler)
