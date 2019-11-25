@@ -1,6 +1,6 @@
 // ***********************************************************
 //	dma.c
-// 	Прямой доступ к памяти v2.0.0
+// 	Прямой доступ к памяти v2.1.0
 // 
 //  Требования: lowlevelsys, clock
 //  teplofizik, 2016
@@ -43,6 +43,67 @@ typedef struct
     DMA_Channel_TypeDef * DMA_Channel;
 	IRQn_Type             NVIC_IRQn;
 } TDMAChannel;
+
+// ***********************************************************
+// Конфигурация по потокам
+typedef struct _TDMAStream
+{
+	TDMASource Source;
+	bool       Direction;          // true: to peripheral, false: to memory
+	bool       Interrupt;          // true: enable interrupt
+	
+	int        Channel;             // DMA channel id
+	int        (*GetChannel)(const struct _TDMAStream * S); // DMA channel id function
+	
+	uint32_t   PREG;               // Address of peripheral register
+	uint32_t   (*GetPREG)(const struct _TDMAStream * S, TDMASize Size); // Address of peripheral register function
+	
+	void       (*Access)(const struct _TDMAStream * S);
+} TDMAStream;
+
+// DMA Stream func
+static int DMA_Generic_Id(const TDMAStream * S) { return S->Channel; };
+static int DMA_ADC_Id (const TDMAStream * S) { return (SYSCFG->CFGR1 & SYSCFG_CFGR1_ADC_DMA_RMP) ? Channel2 : Channel1; };
+static int DMA_U1TX_Id(const TDMAStream * S) { return (SYSCFG->CFGR1 & SYSCFG_CFGR1_USART1TX_DMA_RMP) ? Channel4 : Channel2; };
+static int DMA_U1RX_Id(const TDMAStream * S) { return (SYSCFG->CFGR1 & SYSCFG_CFGR1_USART1RX_DMA_RMP) ? Channel5 : Channel3; };
+
+static uint32_t DMA_Generic_PREG(const TDMAStream * S, TDMASize Size) { return S->PREG; };
+static uint32_t DMA_DAC_PREG(const TDMAStream * S, TDMASize Size)
+{
+#ifdef AVAIL_DAC2
+	if(S->PREG != 1)
+		return (Size == DMA_SIZE_8) ? (uint32_t)&DAC->DHR8R2 : ((Size == DMA_SIZE_16) ? (uint32_t)&DAC->DHR12R2 : 0);
+	else
+#endif
+		return (Size == DMA_SIZE_8) ? (uint32_t)&DAC->DHR8R1 : ((Size == DMA_SIZE_16) ? (uint32_t)&DAC->DHR12R1 : 0);	
+};
+
+static void SPI_Access(const TDMAStream * S)
+{
+	SPI1->CR2 |= SPI_CR2_TXDMAEN;
+}
+
+// DMA table
+static const TDMAStream StreamConfig[] = {
+	{ DMA_ADC,         false, false,            -1,     DMA_ADC_Id,    (uint32_t)&ADC1->DR, DMA_Generic_PREG, 0 }, // 16 bit
+	{ DMA_DAC1,         true, false, (int)Channel3, DMA_Generic_Id,                      1,     DMA_DAC_PREG, 0 }, // 8,16 bit; right-aligned
+#ifdef AVAIL_DAC2
+	{ DMA_DAC2,         true, false, (int)Channel4, DMA_Generic_Id,                      2,     DMA_DAC_PREG, 0 }, // 8,16 bit; right-aligned
+#endif
+	{ DMA_USART1_TX,    true,  true,            -1,    DMA_U1TX_Id, (uint32_t)&USART1->TDR, DMA_Generic_PREG, 0 }, // 8 bit
+	{ DMA_USART1_RX,   false, false,            -1,    DMA_U1RX_Id, (uint32_t)&USART1->RDR, DMA_Generic_PREG, 0 }, // 8 bit
+
+	{ DMA_USART2_TX,    true,  true, (int)Channel4, DMA_Generic_Id, (uint32_t)&USART2->TDR, DMA_Generic_PREG, 0 }, // 8 bit, можно ремапить на ch6
+	{ DMA_USART2_RX,   false, false, (int)Channel5, DMA_Generic_Id, (uint32_t)&USART2->RDR, DMA_Generic_PREG, 0 }, // 8 bit, можно ремапить на ch7
+#ifdef AVAIL_USART3
+	{ DMA_USART3_TX,    true,  true, (int)Channel6, DMA_Generic_Id, (uint32_t)&USART3->TDR, DMA_Generic_PREG, 0 }, // 8 bit
+	{ DMA_USART3_RX,   false, false, (int)Channel7, DMA_Generic_Id, (uint32_t)&USART3->RDR, DMA_Generic_PREG, 0 }, // 8 bit
+#endif
+	{ DMA_SPI1,         true, false, (int)Channel3, DMA_Generic_Id,    (uint32_t)&SPI1->DR, DMA_Generic_PREG, SPI_Access }, // 8 bit
+};
+
+// Конец конфигурации
+// ***********************************************************
 
 static const TDMAChannel Channels[] = {
     { DMA1_Channel1, DMA1_Channel1_IRQn },
@@ -131,48 +192,26 @@ void DMA1_Channel4_5_6_7_IRQHandler(void)
 	}    
 }
 
-int dma_GetChannel(TDMASource Source)
+const TDMAStream * GetStream(TDMASource Source)
 {
-    switch(Source)
-    {
-    case DMA_ADC: return (SYSCFG->CFGR1 & SYSCFG_CFGR1_ADC_DMA_RMP) ? Channel2 : Channel1;
-    case DMA_DAC1: return Channel3;
-#ifdef AVAIL_DAC2
-    case DMA_DAC2: return Channel4;
-#endif
-    case DMA_USART1_TX: return (SYSCFG->CFGR1 & SYSCFG_CFGR1_USART1TX_DMA_RMP) ? Channel4 : Channel2;
-    case DMA_USART1_RX: return (SYSCFG->CFGR1 & SYSCFG_CFGR1_USART1RX_DMA_RMP) ? Channel5 : Channel3;
-    case DMA_USART2_TX: return Channel4; // TODO: можно ремапить на ch6
-    case DMA_USART2_RX: return Channel5; // TODO: можно ремапить на ch7
-#ifdef AVAIL_USART3
-    case DMA_USART3_TX: return Channel6; // TODO: можно ремапить
-    case DMA_USART3_RX: return Channel7; // TODO: можно ремапить
-#endif
-    }
-    
-    return -1;
+	int i;
+	for(i = 0; i < sizeof(StreamConfig)/sizeof(StreamConfig[0]); i++)
+	{
+		if(StreamConfig[i].Source == Source)
+			return &StreamConfig[i];
+	}
+	
+	return 0;
 }
 
-uint32_t dma_GetChannelPeripheral(TDMASource Source, TDMASize Size)
+int dma_GetChannel(const TDMAStream * Stream)
 {
-    switch(Source)
-    {
-    case DMA_ADC:       return (uint32_t)&ADC1->DR;
-    case DMA_DAC1:      return (Size == DMA_SIZE_8) ? (uint32_t)&DAC->DHR8R1 : ((Size == DMA_SIZE_16) ? (uint32_t)&DAC->DHR12R1 : 0);
-#ifdef AVAIL_DAC2
-    case DMA_DAC2:      return (Size == DMA_SIZE_8) ? (uint32_t)&DAC->DHR8R2 : ((Size == DMA_SIZE_16) ? (uint32_t)&DAC->DHR12R2 : 0);
-#endif
-    case DMA_USART1_TX: return (uint32_t)&USART1->TDR;
-    case DMA_USART1_RX: return (uint32_t)&USART1->RDR;
-    case DMA_USART2_TX: return (uint32_t)&USART2->TDR;
-    case DMA_USART2_RX: return (uint32_t)&USART2->RDR;
-#ifdef AVAIL_USART3
-    case DMA_USART3_TX: return (uint32_t)&USART3->TDR;
-    case DMA_USART3_RX: return (uint32_t)&USART3->RDR;
-#endif
-    }
-    
-    return 0;
+	return Stream->GetChannel(Stream);
+}
+
+uint32_t dma_GetChannelPeripheral(const TDMAStream * Stream, TDMASize Size)
+{
+	return Stream->GetPREG(Stream, Size);
 }
 
 static bool Init(void)
@@ -197,17 +236,21 @@ static void Uninit(void)
 // Остановить канал DMA
 void dma_Stop(TDMASource Source)
 {
-    int C = dma_GetChannel(Source);
-    if((C >= 0) && ChEnabled[C])
-    {
-        const TDMAChannel * DC = &Channels[C];
-        DC->DMA_Channel->CCR = 0;
-        DC->DMA_Channel->CNDTR = 0;
-        DC->DMA_Channel->CMAR = 0;
-        DC->DMA_Channel->CPAR = 0;
-        
-        ChEnabled[C] = false;
-    }
+	const TDMAStream * S = GetStream(Source);
+	if(S)
+	{
+		int C = dma_GetChannel(S);
+		if((C >= 0) && ChEnabled[C])
+		{
+			const TDMAChannel * DC = &Channels[C];
+			DC->DMA_Channel->CCR = 0;
+			DC->DMA_Channel->CNDTR = 0;
+			DC->DMA_Channel->CMAR = 0;
+			DC->DMA_Channel->CPAR = 0;
+			
+			ChEnabled[C] = false;
+		}
+	}
 }
 
 //
@@ -225,83 +268,91 @@ bool dma_CheckCompleted(int Channel)
 
 static void dma_ConfigureChannel(TDMASource Source, void * Buffer, TDMASize Size, int Count, bool Circular)
 {
-    int C = dma_GetChannel(Source);
-    const TDMAChannel * DC = &Channels[C];
-    
-    {
-        uint32_t CCR;
-    
-        DC->DMA_Channel->CCR = 0;
-        DC->DMA_Channel->CNDTR = Count;
-        DC->DMA_Channel->CPAR = dma_GetChannelPeripheral(Source, Size);
-        DC->DMA_Channel->CMAR = (uint32_t)Buffer;
-        
-        CCR = DMA_CCR_MINC | DMA_CCR_EN;
-        if(Circular) CCR |= DMA_CCR_CIRC;
-        
-		switch(Source)
-		{
-		case DMA_DAC1:	
-#ifdef AVAIL_DAC2
-		case DMA_DAC2:
-#endif
-		case DMA_USART1_TX:
-		case DMA_USART2_TX:
-#ifdef AVAIL_USART3
-		case DMA_USART3_TX:
-#endif
-			CCR |= DMA_CCR_DIR | DMA_CCR_TCIE;
-			NVIC_EnableIRQ(DC->NVIC_IRQn);
-			ChInterrupt[C] = true;
-			break;		
-		default:
-			ChInterrupt[C] = false;
-			break;
-		}
+	const TDMAStream * S = GetStream(Source);
+	if(S)
+	{
+		int C = dma_GetChannel(S);
+		const TDMAChannel * DC = &Channels[C];
 		
-        switch(Size)
-        {
-        case DMA_SIZE_8: break;
-        case DMA_SIZE_16: CCR |= DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0; break;
-        case DMA_SIZE_32: CCR |= DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1; break;
-        }
-        
-        DC->DMA_Channel->CCR = CCR;
-        
-        ChSource[C] = Source;
-        ChEnabled[C] = true;
-    }
+		{
+			uint32_t CCR;
+		
+			if(S->Access) S->Access(S);
+			
+			DC->DMA_Channel->CCR = 0;
+			DC->DMA_Channel->CNDTR = Count;
+			DC->DMA_Channel->CPAR = dma_GetChannelPeripheral(S, Size);
+			DC->DMA_Channel->CMAR = (uint32_t)Buffer;
+			
+			CCR = DMA_CCR_MINC | DMA_CCR_EN;
+			if(Circular)     CCR |= DMA_CCR_CIRC;
+			if(S->Direction) CCR |= DMA_CCR_DIR;
+			if(S->Interrupt)
+			{
+				CCR |= DMA_CCR_TCIE;
+				NVIC_EnableIRQ(DC->NVIC_IRQn);
+				ChInterrupt[C] = true;
+			}
+			else
+			{
+				ChInterrupt[C] = false;
+			}
+			
+			switch(Size)
+			{
+			case DMA_SIZE_8: break;
+			case DMA_SIZE_16: CCR |= DMA_CCR_MSIZE_0 | DMA_CCR_PSIZE_0; break;
+			case DMA_SIZE_32: CCR |= DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1; break;
+			}
+			
+			ChSource[C] = Source;
+			ChEnabled[C] = true;
+			
+			DC->DMA_Channel->CCR = CCR;
+		}
+	}
 }
 
 // Работа дма в обычном режиме (выплюнул и забыл)
 void dma_Start(TDMASource Source, void * Buffer, TDMASize Size, int Count)
 {
-    int C = dma_GetChannel(Source);
-    bool Avail = !ChEnabled[C] || (ChEnabled[C] && (dma_CheckCompleted(C)));
-    if((C >= 0) && Avail)
-        dma_ConfigureChannel(Source, Buffer, Size, Count, false);
+	const TDMAStream * S = GetStream(Source);
+	if(S)
+	{
+		int C = dma_GetChannel(S);
+		bool Avail = !ChEnabled[C] || (ChEnabled[C] && (dma_CheckCompleted(C)));
+		if((C >= 0) && Avail)
+			dma_ConfigureChannel(Source, Buffer, Size, Count, false);
+	}
 }
 
 // Работа дма в циклическом режиме
 void dma_StartCircular(TDMASource Source, void * Buffer, TDMASize Size, int Count)
 {
-    int C = dma_GetChannel(Source);
-    bool Avail = !ChEnabled[C] || (ChSource[C] == Source);
-    if((C >= 0) && Avail)
-        dma_ConfigureChannel(Source, Buffer, Size, Count, true);
+	const TDMAStream * S = GetStream(Source);
+	if(S)
+	{
+		int C = dma_GetChannel(S);
+		bool Avail = !ChEnabled[C] || (ChSource[C] == Source);
+		if((C >= 0) && Avail)
+			dma_ConfigureChannel(Source, Buffer, Size, Count, true);
+	}
 }
 
 // Получить номер полученного/отправляемого элемента
 int  dma_GetIndex(TDMASource Source)
 {
-    int C = dma_GetChannel(Source);
-    if((C >= 0) && ChEnabled[C] && (ChSource[C] == Source))
-    {
-        const TDMAChannel * DC = &Channels[C];
-        
-        return DC->DMA_Channel->CNDTR;
-    }
-    
+	const TDMAStream * S = GetStream(Source);
+	if(S)
+	{
+		int C = dma_GetChannel(S);
+		if((C >= 0) && ChEnabled[C] && (ChSource[C] == Source))
+		{
+			const TDMAChannel * DC = &Channels[C];
+			
+			return DC->DMA_Channel->CNDTR;
+		}
+	}
     return 0;
 }
 
