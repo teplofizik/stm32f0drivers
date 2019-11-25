@@ -83,16 +83,19 @@ void mem_Free(void * Memory)
 {
     if(MemEnabled)
     {
-        THeapRecord * R = mem_GetBlockRecord(Memory);
-        // удалим из таблицы
-        if(R)
-        {
-            MemAllocated -= R->Size;
-            
-            memset(R, 0, sizeof(*R));
-        }
-        
-        free(Memory);
+		if(Memory)
+		{
+			THeapRecord * R = mem_GetBlockRecord(Memory);
+			// удалим из таблицы
+			if(R)
+			{
+				MemAllocated -= R->Size;
+				
+				memset(R, 0, sizeof(*R));
+			}
+			
+			free(Memory);
+		}
     }
 }
 	

@@ -11,6 +11,8 @@
 
 #include <string.h>
 
+#define FAST_DETECT 1
+
 typedef struct
 {
     TPin        Pin;
@@ -28,8 +30,17 @@ static bool ExtiEnabled = false;
 
 static __inline void EXTI_IRQHandler(uint8_t Index)
 {
-    EXTI->PR = (1 << Index); EXTIFlag[Index] = true;
+    EXTI->PR = (1 << Index); 
+#if (FAST_DETECT == 0)
+	EXTIFlag[Index] = true;
     Detect = true;
+#else
+	{
+		TEXTIRecord * Record = &EXTIHandlerList[Index];
+	
+		if(Record->Handler) Record->Handler();
+	}
+#endif
 }
 
 void EXTI0_1_IRQHandler(void)
@@ -57,9 +68,9 @@ static void exti_EnableInterrupt(uint8_t Index)
     switch(Index)
     {
     case 0: 
-    case 1: NVIC_EnableIRQ(EXTI0_1_IRQn); break;
+    case 1: NVIC_EnableIRQ(EXTI0_1_IRQn); NVIC_SetPriority(EXTI0_1_IRQn, 1); break;
     case 2: 
-    case 3: NVIC_EnableIRQ(EXTI2_3_IRQn); break;
+    case 3: NVIC_EnableIRQ(EXTI2_3_IRQn); NVIC_SetPriority(EXTI2_3_IRQn, 1); break;
     case 4: 
     case 5:
     case 6:
@@ -71,7 +82,7 @@ static void exti_EnableInterrupt(uint8_t Index)
     case 12:
     case 13:
     case 14:
-    case 15: NVIC_EnableIRQ(EXTI4_15_IRQn); break;
+    case 15: NVIC_EnableIRQ(EXTI4_15_IRQn); NVIC_SetPriority(EXTI4_15_IRQn, 1); break;
     }
 }
 
@@ -192,6 +203,7 @@ static bool Main(void)
 {
     int i;
     
+#if (FAST_DETECT == 0)
     if(Detect)
 	{		
 		Detect = false;
@@ -207,6 +219,7 @@ static bool Main(void)
 			}
 		}
 	}
+#endif
 	return true;
 }
 
