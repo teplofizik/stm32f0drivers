@@ -1,6 +1,6 @@
 // ***********************************************************
 //	adc.c
-// 	АЦП v2.1.0
+// 	АЦП v2.1.1
 //  АЦП на 16 каналов + каналы батарейки, опорного напряжения и 
 //  температуры
 //
@@ -68,6 +68,12 @@ static void adc_Reconfigure(void)
     // Выключим АЦП
     if(ADCCount > 0)
     {
+        ADC1->CR |= ADC_CR_ADSTP;
+		while(ADC1->CR & ADC_CR_ADSTART) {} // TODO
+			
+		ADC1->CR |= ADC_CR_ADDIS;
+		while(ADC1->CR & ADC_CR_ADEN) {} // TODO
+		
         ADC1->CFGR1 &= ~ADC_CFGR1_CONT;
         dma_Stop(DMA_ADC);
     }
@@ -98,6 +104,9 @@ static void adc_Reconfigure(void)
         ADC1->CHSELR = CHSELR;
     }
     
+    // Настроим DMA
+    adc_InitDMA(ADCCount);
+	
     // Включим измерение
     if(ADCCount > 0)
     {
@@ -111,8 +120,6 @@ static void adc_Reconfigure(void)
     {
         ADC1->CR = 0;
     }
-    // Настроим DMA
-    adc_InitDMA(ADCCount);
 }
 
 // АЦП
