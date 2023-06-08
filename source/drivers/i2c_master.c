@@ -1,6 +1,6 @@
 // ***********************************************************
 //	i2c_master.c
-//  I2C Master v2.0.0
+//  I2C Master v2.0.1
 //
 //  Требования: i2c, memory, systimer
 //  teplofizik, 2017
@@ -223,6 +223,10 @@ static void EventInterrupt(TI2C Phy, TI2CEvent Event, uint8_t Data)
 		case I2CE_ERROR:
 			i2c_Stop(Phy);
 			Error(S);
+			break;
+		case I2CE_NACK:
+			i2c_Stop(Phy);
+			StopQueue(S, I2C_NACK);
 			break;
 		default:
 			break;

@@ -1,6 +1,6 @@
 // ***********************************************************
 //  exti.c
-//  Драйвер внешних прерываний v2.0.0
+//  Драйвер внешних прерываний v2.0.1
 //
 //  Требования: lowlevelsys
 //  teplofizik, 2016
@@ -24,8 +24,10 @@ typedef struct
 
 static const int HandlerCount = 16;
 static TEXTIRecord EXTIHandlerList[HandlerCount];
+#if (FAST_DETECT == 0)
 static bool EXTIFlag[HandlerCount];
 static bool Detect = false;
+#endif
 static bool ExtiEnabled = false;
 
 static __inline void EXTI_IRQHandler(uint8_t Index)
@@ -169,11 +171,15 @@ bool exti_Listen(const TPin * Pin, TSignalEdge Edge, TEventHandler Handler)
 
 static bool Init(void)
 {
+#if (FAST_DETECT == 0)
     int i;
+#endif
 	
     if(!drv_Require(&exti, "lowlevelsys")) return false;
 	
+#if (FAST_DETECT == 0)
     for(i = 0; i < HandlerCount; i++) EXTIFlag[i] = false;
+#endif
     memset(EXTIHandlerList, 0, sizeof(EXTIHandlerList));
     
 	ExtiEnabled = true;
@@ -185,8 +191,10 @@ static void Uninit(void)
     int i;
     for(i = 0; i < HandlerCount; i++)
 	{
+#if (FAST_DETECT == 0)
 		EXTIFlag[i] = false;
-		
+#endif
+
 		if(EXTIHandlerList[i].Enabled)
 			exti_DisableInterrupt(i);
 	}
@@ -201,9 +209,9 @@ static void Uninit(void)
 
 static bool Main(void)
 {
-    int i;
-    
 #if (FAST_DETECT == 0)
+    int i;
+	
     if(Detect)
 	{		
 		Detect = false;

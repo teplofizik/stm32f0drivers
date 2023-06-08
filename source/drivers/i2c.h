@@ -1,6 +1,6 @@
 // ***********************************************************
 //	i2c.h
-//  I2C v1.0.3
+//  I2C v1.0.4
 //
 //  Требования: clock, gpio
 //  teplofizik, 2017
@@ -18,7 +18,7 @@
 	typedef enum
 	{
 		PI2C1, // 0:PB6,PB7;   1:PB8,PB9
-		PI2C2, // 0:PB10,PB11; 1:PB13,PB14
+		PI2C2, // 0:PB10,PB11; 1:PB13,PB14, 2: PF6, PF7
 	} TI2C;
 	
 	typedef enum

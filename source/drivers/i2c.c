@@ -1,6 +1,6 @@
 // ***********************************************************
 //	i2c.с
-//  I2C v1.0.3
+//  I2C v1.0.4
 //
 //  Требования: clock, gpio
 //  teplofizik, 2017
@@ -26,7 +26,7 @@ typedef struct
 	I2C_TypeDef * I2C;
 	
 	uint8_t       PinsCount;
-	TI2CPins      Pins[2];
+	TI2CPins      Pins[3];
 	
 	IRQn_Type     IRQn;
 } TI2CPhy;
@@ -39,7 +39,7 @@ typedef struct
 
 static const TI2CPhy PHY[] = {
 	{PR_I2C1, I2C1, 2, { {{PB, 6},{PB, 7}, 1}, {{PB, 8},{PB, 9}, 1} }, I2C1_IRQn}, // I2C1: PB6,PB7;PB8,PB9
-	{PR_I2C2, I2C2, 2, { {{PB,10},{PB,11}, 1}, {{PB,13},{PB,14}, 5} }, I2C2_IRQn}, // I2C2: PB10,PB11;PB13,PB14
+	{PR_I2C2, I2C2, 2, { {{PB,10},{PB,11}, 1}, {{PB,13},{PB,14}, 5}, {{PF,6},{PF,7}, 0} }, I2C2_IRQn}, // I2C2: PB10,PB11;PB13,PB14;PF6,PF7
 };
 static const int PHYCount = sizeof(PHY) / sizeof(PHY[0]);
 

@@ -1,6 +1,6 @@
 // ***********************************************************
 //	i2c_master.h
-//  I2C Master v2.0.0
+//  I2C Master v2.0.1
 //
 //  Требования: i2c, memory, systimer
 //  teplofizik, 2017

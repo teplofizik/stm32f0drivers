@@ -1,6 +1,6 @@
 // ***********************************************************
 //  timer.h
-// 	Управление таймерами v2.0.5
+// 	Управление таймерами v2.0.6
 //  Таймеры
 //
 //  Требования: gpio, clock
@@ -342,6 +342,19 @@ void tim_Init(TTimer T, uint32_t Counts, uint32_t Frequency)
 	if(TD)
 	{
 		InitTimer(TD, Counts, Frequency);
+	}
+}
+
+// Импульсный режим
+void tim_OnePulse(TTimer T, bool Value)
+{
+	const TTimerDef * TD = GetTimer(T);
+	if(TD)
+	{
+		if(Value)
+			TD->TIM->CR1 |= TIM_CR1_OPM;
+		else
+			TD->TIM->CR1 &= ~TIM_CR1_OPM;
 	}
 }
 

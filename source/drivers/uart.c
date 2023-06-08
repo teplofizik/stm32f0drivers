@@ -59,7 +59,7 @@ typedef struct
 
 // Таблица уартов
 static const TUartPort Ports[] = {
-    { USART1, PR_USART1, USART1_IRQn,   1, {PA,  9}, {PA, 10}, DMA_USART1_TX, DMA_USART1_RX },
+    { USART1, PR_USART1, USART1_IRQn,   1, {PA,  9}, {PA, 10}, DMA_USART1_TX, DMA_USART1_RX }, // 0, {PB,  6}, {PB, 7}
     { USART2, PR_USART2, USART2_IRQn,   1, {PA,  2}, {PA,  3}, DMA_USART2_TX, DMA_USART2_RX },
 #ifdef AVAIL_USART3 // todo
     { USART3, PR_USART3, USART3_4_IRQn, 4, {PB, 10}, {PB, 11}, DMA_USART3_TX, DMA_USART3_RX }

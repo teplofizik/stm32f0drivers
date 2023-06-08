@@ -33,7 +33,7 @@
         DMA_USART2_RX, // 8 bit
 #ifdef AVAIL_USART3
         DMA_USART3_TX, // 8 bit
-        DMA_USART3_RX  // 8 bit
+        DMA_USART3_RX, // 8 bit
 #endif
 		DMA_SPI1,      // 8 bit, запись в SPI данных из циклического буфера по таймеру 15
     } TDMASource;

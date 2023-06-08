@@ -1,6 +1,6 @@
 // ***********************************************************
 //  timer.h
-// 	Управление таймерами v2.0.5
+// 	Управление таймерами v2.0.6
 //  Таймеры
 //
 //  Требования: gpio, clock
@@ -102,6 +102,9 @@
 	// Остановка счёта таймера
 	void tim_Stop(TTimer T);
 	
+	// Импульсный режим
+	void tim_OnePulse(TTimer T, bool Value);
+
 	// Настройка таймера
 	void tim_Init(TTimer T, uint32_t Counts, uint32_t Frequency);
 	
