@@ -15,6 +15,7 @@ static const TDriver * Drivers[] = {
 	&gpio,         // "gpio"
 	&exti,         // "exti",
 	&timer,        // "timer"
+//	&finetimer,    // "finetimer"
     &systimer,     // "systimer"
     &activity,     // "activity"
     &dma,          // "dma"

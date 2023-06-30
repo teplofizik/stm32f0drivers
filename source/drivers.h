@@ -37,6 +37,7 @@
     
 	// Таймеры аппаратные
     #include "drivers/timer.h"
+    #include "drivers/finetimer.h"
 	
     // DMA
     #include "drivers/dma.h"

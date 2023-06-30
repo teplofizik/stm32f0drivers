@@ -668,6 +668,16 @@
               <FileType>5</FileType>
               <FilePath>.\source\drivers\uuid.h</FilePath>
             </File>
+            <File>
+              <FileName>finetimer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\source\drivers\finetimer.c</FilePath>
+            </File>
+            <File>
+              <FileName>finetimer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\source\drivers\finetimer.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
